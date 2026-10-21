@@ -140,6 +140,13 @@ The footer badge reads those values at build time and will automatically reflect
 - Trigger a manual incident or synthetic failure in the provider to verify the badge flips to yellow/red.
 - Confirm the badge links back to the public incident history and subscribe flow.
 
+## Known pre-existing test failures
+
+The Stellar page (`/stellar`) currently has 2 failing unit tests that pre-date
+the i18n work introduced in #134. They are unrelated to translations or locale
+switching. Do not treat them as regressions when reviewing PRs — track them
+under their own issue and fix them independently.
+
 ## Commit conventions
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
