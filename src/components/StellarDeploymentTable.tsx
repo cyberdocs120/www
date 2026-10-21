@@ -1,21 +1,32 @@
-import { getDeployment } from '@wraith-protocol/sdk/chains/stellar';
+/**
+ * StellarDeploymentTable
+ *
+ * Displays the testnet contract addresses for the Wraith Stellar deployment.
+ *
+ * Import boundary: this component intentionally imports from
+ * src/data/stellarDeployment.ts (plain static constants) rather than directly
+ * from @wraith-protocol/sdk/chains/stellar. That keeps @stellar/stellar-sdk
+ * out of this chunk's preload graph — the ~900 kB vendor-stellar-sdk chunk is
+ * only fetched by components that actually need live Soroban RPC calls
+ * (i.e. StellarMetrics via stellarMetrics.ts).
+ */
+import {
+  STELLAR_CONTRACTS,
+  STELLAR_EXPLORER_BASE,
+} from '../data/stellarDeployment';
 import { trackOutbound } from '../utils/track';
 import { useInView } from '../hooks/useInView';
-
-const stellarDeployment = getDeployment('stellar');
-const explorerUrl = (contractId: string) =>
-  `https://stellar.expert/explorer/testnet/contract/${contractId}`;
 
 const contracts = [
   {
     name: 'Announcement Registry',
-    address: stellarDeployment.contracts.announcer,
-    explorer: explorerUrl(stellarDeployment.contracts.announcer),
+    address: STELLAR_CONTRACTS.announcer,
+    explorer: `${STELLAR_EXPLORER_BASE}${STELLAR_CONTRACTS.announcer}`,
   },
   {
     name: 'Names Registry',
-    address: stellarDeployment.contracts.names,
-    explorer: explorerUrl(stellarDeployment.contracts.names),
+    address: STELLAR_CONTRACTS.names,
+    explorer: `${STELLAR_EXPLORER_BASE}${STELLAR_CONTRACTS.names}`,
   },
 ];
 
