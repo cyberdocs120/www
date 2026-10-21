@@ -21,6 +21,9 @@ export default defineConfig({
     tailwindcss(),
   ],
   build: {
+    // Emit dist/.vite/manifest.json so scripts/check-chunk-budget.mjs can
+    // walk the real import graph and enforce per-chunk and per-route budgets.
+    manifest: true,
     // Raise the warning threshold to 600 kB so only genuinely over-budget
     // chunks (above the limit set in scripts/check-chunk-budget.mjs) surface
     // as warnings during the build. The CI budget check enforces the real
@@ -29,14 +32,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Group the Stellar SDK into its own vendor chunk so it is shared
-          // between StellarDeploymentTable, StellarMetrics (home page), and
-          // any other future consumers without being duplicated.
+          // Group the Wraith SDK into its own vendor chunk so it is shared
+          // across all consumers without being duplicated.
           if (id.includes('@wraith-protocol/sdk')) {
             return 'vendor-wraith-sdk';
           }
-          // Group the Stellar network SDK (stellar-sdk) separately; it is
-          // only pulled in by the stellarMetrics utility.
+          // Group the Stellar network SDK separately; it is only pulled in
+          // by stellarMetrics.ts (used by StellarMetrics on the home page).
+          // StellarDeploymentTable uses src/data/stellarDeployment.ts (plain
+          // static constants) and does NOT import this chunk.
           if (id.includes('@stellar/stellar-sdk')) {
             return 'vendor-stellar-sdk';
           }
