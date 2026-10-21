@@ -259,10 +259,7 @@ export default function Stellar() {
         <StellarCodePreview />
 
         {/* ── CTAs ──────────────────────────────────────────────────────────── */}
-        <section
-          ref={ctaRef}
-          className="border-b border-outline-variant-30 px-6 py-24 md:px-12"
-        >
+        <section ref={ctaRef} className="border-b border-outline-variant-30 px-6 py-24 md:px-12">
           <div className="mx-auto max-w-336 flex flex-col gap-10" data-reveal={ctaInView}>
             <div className="flex flex-col gap-3">
               <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">

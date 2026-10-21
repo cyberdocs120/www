@@ -16,10 +16,8 @@
 
 import { readdirSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('..', import.meta.url));
-const assetsDir = join(root, 'dist', 'assets');
+const assetsDir = join(process.cwd(), 'dist', 'assets');
 
 /** Maximum uncompressed size (kB) for any single non-vendor JS chunk. */
 const ROUTE_CHUNK_BUDGET_KB = 500;
@@ -38,9 +36,7 @@ let entries;
 try {
   entries = readdirSync(assetsDir);
 } catch {
-  console.error(
-    `[chunk-budget] Cannot read ${assetsDir} — run \`pnpm build\` before this check.`,
-  );
+  console.error(`[chunk-budget] Cannot read ${assetsDir} — run \`pnpm build\` before this check.`);
   process.exit(1);
 }
 
@@ -81,4 +77,6 @@ if (failed) {
   process.exit(1);
 }
 
-console.log(`\n[chunk-budget] All ${checked} route chunks are within the ${ROUTE_CHUNK_BUDGET_KB} kB budget.`);
+console.log(
+  `\n[chunk-budget] All ${checked} route chunks are within the ${ROUTE_CHUNK_BUDGET_KB} kB budget.`,
+);

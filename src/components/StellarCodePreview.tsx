@@ -228,9 +228,7 @@ export default function StellarCodePreview() {
                   >
                     {i + 1}
                   </span>
-                  <span
-                    className={`whitespace-pre font-mono text-[13px] ${colorMap[line.color]}`}
-                  >
+                  <span className={`whitespace-pre font-mono text-[13px] ${colorMap[line.color]}`}>
                     {line.content || ' '}
                   </span>
                 </div>
