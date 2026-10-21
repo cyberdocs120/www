@@ -1,133 +1,18 @@
-import { useState, type KeyboardEvent } from 'react';
+import { lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { useInView } from '../hooks/useInView';
-import { trackEvent } from '../analytics';
-import { track, trackOutbound } from '../utils/track';
-import EcosystemPartners from '../components/EcosystemPartners';
-import { getDeployment } from '@wraith-protocol/sdk/chains/stellar';
+import { track } from '../utils/track';
 import { usePageSeo } from '../utils/seo';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Lazy sub-components ─────────────────────────────────────────────────────
+// These are loaded after the primary content (hero + steps) has painted.
+// StellarDeploymentTable pulls in @wraith-protocol/sdk/chains/stellar at
+// runtime; StellarCodePreview and EcosystemPartners are large JSX chunks.
 
-type CodeLine = {
-  content: string;
-  color: 'code' | 'comment' | 'highlight';
-};
-
-const tabs = ['send.ts', 'scan.ts', 'withdraw.ts'] as const;
-type Tab = (typeof tabs)[number];
-
-// ─── Code content ─────────────────────────────────────────────────────────────
-// Matches Hero.tsx tab names and SDK import paths exactly
-
-const codeByTab: Record<Tab, CodeLine[]> = {
-  'send.ts': [
-    {
-      content:
-        "import { bytesToHex, encodeStealthMetaAddress, generateStealthAddress } from '@wraith-protocol/sdk/chains/stellar'",
-      color: 'code',
-    },
-    { content: '', color: 'code' },
-    { content: 'declare const spendingPubKey: Uint8Array', color: 'code' },
-    { content: 'declare const viewingPubKey: Uint8Array', color: 'code' },
-    { content: '', color: 'code' },
-    { content: '// Stellar recipients share st:xlm: stealth meta-addresses', color: 'comment' },
-    {
-      content: 'const metaAddress = encodeStealthMetaAddress(spendingPubKey, viewingPubKey)',
-      color: 'highlight',
-    },
-    { content: '', color: 'code' },
-    {
-      content: '// generate a one-time Stellar G... address and announcement memo',
-      color: 'comment',
-    },
-    {
-      content: 'const stealth = generateStealthAddress(spendingPubKey, viewingPubKey)',
-      color: 'code',
-    },
-    { content: 'const recipient = stealth.stealthAddress', color: 'highlight' },
-    { content: 'const memo = bytesToHex(stealth.ephemeralPubKey)', color: 'code' },
-  ],
-  'scan.ts': [
-    {
-      content:
-        "import { deriveStealthKeys, fetchAnnouncements, scanAnnouncements } from '@wraith-protocol/sdk/chains/stellar'",
-      color: 'code',
-    },
-    { content: '', color: 'code' },
-    { content: 'async function findPayments(walletSignature: Uint8Array) {', color: 'code' },
-    { content: '  const keys = deriveStealthKeys(walletSignature)', color: 'code' },
-    { content: "  const announcements = await fetchAnnouncements('stellar')", color: 'highlight' },
-    { content: '', color: 'code' },
-    { content: '  // derive viewing keys and scan Stellar announcements', color: 'comment' },
-    { content: '  const matched = scanAnnouncements(', color: 'code' },
-    {
-      content: '    announcements, keys.viewingKey, keys.spendingPubKey, keys.spendingScalar',
-      color: 'highlight',
-    },
-    { content: '  )', color: 'code' },
-    { content: '  return matched.map((ann) => ann.stealthAddress)', color: 'code' },
-    { content: '}', color: 'code' },
-  ],
-  'withdraw.ts': [
-    {
-      content:
-        "import { deriveStealthPrivateScalar, hexToBytes, signStellarTransaction } from '@wraith-protocol/sdk/chains/stellar'",
-      color: 'code',
-    },
-    { content: '', color: 'code' },
-    {
-      content: 'declare const keys: { spendingScalar: bigint; viewingKey: Uint8Array }',
-      color: 'code',
-    },
-    {
-      content: 'declare const ann: { ephemeralPubKey: string; stealthPubKeyBytes: Uint8Array }',
-      color: 'code',
-    },
-    { content: 'declare const txHash: Uint8Array', color: 'code' },
-    { content: '', color: 'code' },
-    {
-      content: '// derive the Stellar stealth scalar and sign a transaction hash',
-      color: 'comment',
-    },
-    { content: 'const stealthScalar = deriveStealthPrivateScalar(', color: 'code' },
-    {
-      content: '  keys.spendingScalar, keys.viewingKey, hexToBytes(ann.ephemeralPubKey)',
-      color: 'highlight',
-    },
-    { content: ')', color: 'code' },
-    { content: '', color: 'code' },
-    { content: 'const signature = signStellarTransaction(', color: 'code' },
-    { content: '  txHash, stealthScalar, ann.stealthPubKeyBytes', color: 'highlight' },
-    { content: '})', color: 'code' },
-  ],
-};
-
-const colorMap = {
-  code: 'text-on-surface-variant',
-  comment: 'text-outline',
-  highlight: 'text-primary',
-};
-
-// ─── Deployment table data ────────────────────────────────────────────────────
-
-const stellarDeployment = getDeployment('stellar');
-const explorerUrl = (contractId: string) =>
-  `https://stellar.expert/explorer/testnet/contract/${contractId}`;
-
-const contracts = [
-  {
-    name: 'Announcement Registry',
-    address: stellarDeployment.contracts.announcer,
-    explorer: explorerUrl(stellarDeployment.contracts.announcer),
-  },
-  {
-    name: 'Names Registry',
-    address: stellarDeployment.contracts.names,
-    explorer: explorerUrl(stellarDeployment.contracts.names),
-  },
-];
+const StellarDeploymentTable = lazy(() => import('../components/StellarDeploymentTable'));
+const StellarCodePreview = lazy(() => import('../components/StellarCodePreview'));
+const EcosystemPartners = lazy(() => import('../components/EcosystemPartners'));
 
 // ─── How it works steps ───────────────────────────────────────────────────────
 
@@ -170,50 +55,11 @@ const props = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Stellar() {
-  const [activeTab, setActiveTab] = useState<Tab>('send.ts');
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   const seo = usePageSeo('stellar');
 
   const { ref: heroRef, isInView: heroInView } = useInView({ threshold: 0.1 });
   const { ref: stepsRef, isInView: stepsInView } = useInView({ threshold: 0.1 });
-  const { ref: tableRef, isInView: tableInView } = useInView({ threshold: 0.1 });
-  const { ref: codeRef, isInView: codeInView } = useInView({ threshold: 0.1 });
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.1 });
-
-  const activeTabIndex = tabs.indexOf(activeTab);
-  const lines = codeByTab[activeTab];
-
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    trackEvent('Stellar Code Tab Change', { props: { tab } });
-  };
-
-  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    let next = activeTabIndex;
-    if (e.key === 'ArrowRight') next = (activeTabIndex + 1) % tabs.length;
-    else if (e.key === 'ArrowLeft') next = (activeTabIndex - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = tabs.length - 1;
-    else return;
-    e.preventDefault();
-    const nextTab = tabs[next];
-    if (!nextTab) return;
-    setActiveTab(nextTab);
-    requestAnimationFrame(() => {
-      document.getElementById(`stellar-tab-${nextTab}`)?.focus();
-    });
-  };
-
-  const handleCopy = async () => {
-    const text = lines.map((l) => l.content).join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyStatus('copied');
-    } catch {
-      setCopyStatus('failed');
-    }
-    setTimeout(() => setCopyStatus('idle'), 2000);
-  };
 
   return (
     <>
@@ -295,7 +141,7 @@ export default function Stellar() {
                 </Link>
               </div>
 
-              {/* Value prop stats — matches Hero.tsx stat block */}
+              {/* Value prop stats */}
               <div className="flex flex-wrap items-center gap-8 pt-4">
                 {props.map((p) => (
                   <div key={p.label} className="flex flex-col gap-1">
@@ -407,255 +253,90 @@ export default function Stellar() {
         </div>
       </section>
 
-      {/* ── Deployment table ──────────────────────────────────────────────── */}
-      <section ref={tableRef} className="border-b border-outline-variant-30 px-6 py-24 md:px-12">
-        <div className="mx-auto max-w-336 flex flex-col gap-8" data-reveal={tableInView}>
-          <div className="flex flex-col gap-3">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
-              Deployments
-            </span>
-            <h2 className="font-heading text-[28px] font-bold tracking-[-1.2px] text-on-surface sm:text-[40px]">
-              Testnet contracts
-            </h2>
-          </div>
+      {/* ── Deployment table, code preview, CTAs, partners — loaded lazily ── */}
+      <Suspense fallback={null}>
+        <StellarDeploymentTable />
+        <StellarCodePreview />
 
-          <div className="border border-outline-variant overflow-x-auto">
-            <table className="w-full border-collapse font-body text-[13px]">
-              <thead>
-                <tr className="border-b border-outline-variant bg-surface-container">
-                  <th className="py-3 px-4 text-left font-mono text-[10px] font-semibold tracking-[1.5px] text-outline uppercase">
-                    Contract
-                  </th>
-                  <th className="py-3 px-4 text-left font-mono text-[10px] font-semibold tracking-[1.5px] text-outline uppercase">
-                    Address
-                  </th>
-                  <th className="py-3 px-4 text-left font-mono text-[10px] font-semibold tracking-[1.5px] text-outline uppercase">
-                    Explorer
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((c, i) => (
-                  <tr
-                    key={c.name}
-                    className={i < contracts.length - 1 ? 'border-b border-outline-variant' : ''}
-                  >
-                    <td className="py-3 px-4 font-heading text-[13px] font-medium text-on-surface whitespace-nowrap">
-                      {c.name}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-on-surface-variant break-all">
-                      {c.address}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <a
-                        href={c.explorer}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={trackOutbound('explorer')}
-                        className="font-mono text-[11px] font-semibold tracking-[1px] text-tertiary hover:brightness-110 transition-[filter]"
-                      >
-                        View ↗
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <p className="font-mono text-[10px] tracking-[1px] text-outline">
-            Addresses are sourced from the SDK&apos;s canonical Stellar testnet deployment registry.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Code preview ──────────────────────────────────────────────────── */}
-      {/* Mirrors Hero.tsx code block structure exactly */}
-      <section ref={codeRef} className="border-b border-outline-variant-30 px-6 py-24 md:px-12">
-        <div className="mx-auto max-w-336 flex flex-col gap-8" data-reveal={codeInView}>
-          <div className="flex flex-col gap-3">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
-              SDK
-            </span>
-            <h2 className="font-heading text-[28px] font-bold tracking-[-1.2px] text-on-surface sm:text-[40px]">
-              Code examples
-            </h2>
-            <p className="font-body text-[14px] leading-[1.6] text-on-surface-variant max-w-xl">
-              All functions are tree-shakeable and typed. Import only what you need from{' '}
-              <code className="font-mono text-[13px] text-primary">
-                @wraith-protocol/sdk/chains/stellar
-              </code>
-              .
-            </p>
-          </div>
-
-          {/* Tab bar — mirrors Hero.tsx exactly */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between border border-b-0 border-outline-variant bg-surface-container px-4 py-3">
-              <div
-                className="flex items-center gap-0"
-                role="tablist"
-                aria-label="Stellar code examples"
-              >
-                {tabs.map((tab) => (
-                  <button
-                    key={tab}
-                    id={`stellar-tab-${tab}`}
-                    role="tab"
-                    aria-selected={activeTab === tab}
-                    aria-controls={`stellar-panel-${tab}`}
-                    tabIndex={activeTab === tab ? 0 : -1}
-                    onClick={() => handleTabChange(tab)}
-                    onKeyDown={handleTabKeyDown}
-                    className={`flex items-center justify-center px-3 py-1.5 transition-colors duration-150 ${
-                      activeTab === tab
-                        ? 'bg-surface-bright'
-                        : 'hover:bg-surface-bright/50 cursor-pointer'
-                    }`}
-                  >
-                    <span
-                      className={`font-mono text-[11px] ${
-                        activeTab === tab ? 'font-medium text-on-surface' : 'text-outline'
-                      }`}
-                    >
-                      {tab}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={handleCopy}
-                aria-label={`Copy ${activeTab} to clipboard`}
-                className="flex cursor-pointer items-center gap-1.5 px-2 py-1 transition-colors duration-150 hover:opacity-80"
-              >
-                <span className="font-mono text-[10px] font-semibold tracking-[1px] text-outline">
-                  {copyStatus === 'copied' && 'COPIED'}
-                  {copyStatus === 'failed' && 'FAILED'}
-                  {copyStatus === 'idle' && 'COPY'}
-                </span>
-              </button>
-              <span className="sr-only" aria-live="polite">
-                {copyStatus === 'copied' && `${activeTab} copied to clipboard`}
-                {copyStatus === 'failed' && `Failed to copy ${activeTab}`}
+        {/* ── CTAs ──────────────────────────────────────────────────────────── */}
+        <section
+          ref={ctaRef}
+          className="border-b border-outline-variant-30 px-6 py-24 md:px-12"
+        >
+          <div className="mx-auto max-w-336 flex flex-col gap-10" data-reveal={ctaInView}>
+            <div className="flex flex-col gap-3">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
+                Get started
               </span>
+              <h2 className="font-heading text-[28px] font-bold tracking-[-1.2px] text-on-surface sm:text-[40px]">
+                Build on Stellar today
+              </h2>
             </div>
 
-            <div
-              id={`stellar-panel-${activeTab}`}
-              role="tabpanel"
-              aria-labelledby={`stellar-tab-${activeTab}`}
-              className="overflow-x-auto border border-outline-variant bg-surface-container p-6"
-            >
-              <div className="w-max min-w-full">
-                {lines.map((line, i) => (
-                  <div key={`${activeTab}-${i}`} className="flex gap-4 py-1">
-                    <span
-                      className="w-4 shrink-0 font-mono text-xs text-outline select-none"
-                      aria-hidden="true"
-                    >
-                      {i + 1}
-                    </span>
-                    <span
-                      className={`whitespace-pre font-mono text-[13px] ${colorMap[line.color]}`}
-                    >
-                      {line.content || ' '}
-                    </span>
-                  </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="https://demo.usewraith.xyz/stellar"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track('cta_click', { source: 'stellar-demo' })}
+                className="flex h-12 items-center justify-center bg-primary px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-surface transition-[filter] duration-150 hover:brightness-110"
+              >
+                Try Stellar Demo
+              </a>
+              <a
+                href="https://docs.usewraith.xyz/sdk/chains/stellar"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track('cta_click', { source: 'stellar-docs' })}
+                className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
+              >
+                Read Stellar docs
+              </a>
+              <Link
+                to="/roadmap#phase-2"
+                onClick={() => track('cta_click', { source: 'stellar-spectre' })}
+                className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
+              >
+                Spectre on Stellar
+              </Link>
+              <Link
+                to="/"
+                className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
+              >
+                ← Back to home
+              </Link>
+            </div>
+
+            {/* Ecosystem credits */}
+            <div className="mt-4 flex flex-col gap-4 border-t border-outline-variant pt-8">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
+                Built with
+              </span>
+              <div className="flex flex-wrap items-center gap-6">
+                {[
+                  { name: 'Stellar Development Foundation', url: 'https://stellar.org' },
+                  { name: 'Soroban', url: 'https://soroban.stellar.org' },
+                  { name: 'Freighter Wallet', url: 'https://freighter.app' },
+                ].map((credit) => (
+                  <a
+                    key={credit.name}
+                    href={credit.url}
+                    target="_blank"
+                    onClick={() => track('cta_click', { source: 'stellar-credit' })}
+                    rel="noopener noreferrer"
+                    className="font-mono text-[11px] text-on-surface-variant hover:text-primary transition-colors duration-150"
+                  >
+                    {credit.name} ↗
+                  </a>
                 ))}
               </div>
             </div>
-
-            <div className="flex items-center justify-between border border-t-0 border-outline-variant bg-surface-container px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-tertiary" />
-                <span className="font-mono text-[11px] text-on-surface-variant">
-                  npm install @wraith-protocol/sdk
-                </span>
-              </div>
-              <span className="font-mono text-[10px] font-semibold tracking-[1.5px] text-outline">
-                TYPESCRIPT
-              </span>
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── CTAs ──────────────────────────────────────────────────────────── */}
-      <section ref={ctaRef} className="border-b border-outline-variant-30 px-6 py-24 md:px-12">
-        <div className="mx-auto max-w-336 flex flex-col gap-10" data-reveal={ctaInView}>
-          <div className="flex flex-col gap-3">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
-              Get started
-            </span>
-            <h2 className="font-heading text-[28px] font-bold tracking-[-1.2px] text-on-surface sm:text-[40px]">
-              Build on Stellar today
-            </h2>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="https://demo.usewraith.xyz/stellar"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => track('cta_click', { source: 'stellar-demo' })}
-              className="flex h-12 items-center justify-center bg-primary px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-surface transition-[filter] duration-150 hover:brightness-110"
-            >
-              Try Stellar Demo
-            </a>
-            <a
-              href="https://docs.usewraith.xyz/sdk/chains/stellar"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => track('cta_click', { source: 'stellar-docs' })}
-              className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
-            >
-              Read Stellar docs
-            </a>
-            <Link
-              to="/roadmap#phase-2"
-              onClick={() => track('cta_click', { source: 'stellar-spectre' })}
-              className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
-            >
-              Spectre on Stellar
-            </Link>
-            <Link
-              to="/"
-              className="flex h-12 items-center justify-center border border-outline-variant px-7 font-heading text-[13px] font-semibold uppercase tracking-[1.5px] text-primary transition-colors duration-150 hover:bg-surface-bright"
-            >
-              ← Back to home
-            </Link>
-          </div>
-
-          {/* Ecosystem credits */}
-          <div className="mt-4 flex flex-col gap-4 border-t border-outline-variant pt-8">
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-outline">
-              Built with
-            </span>
-            <div className="flex flex-wrap items-center gap-6">
-              {[
-                { name: 'Stellar Development Foundation', url: 'https://stellar.org' },
-                { name: 'Soroban', url: 'https://soroban.stellar.org' },
-                { name: 'Freighter Wallet', url: 'https://freighter.app' },
-              ].map((credit) => (
-                <a
-                  key={credit.name}
-                  href={credit.url}
-                  target="_blank"
-                  onClick={trackOutbound('other')}
-                  rel="noopener noreferrer"
-                  className="font-mono text-[11px] text-on-surface-variant hover:text-primary transition-colors duration-150"
-                >
-                  {credit.name} ↗
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Ecosystem partners ────────────────────────────────────────────── */}
-      <EcosystemPartners />
+        {/* ── Ecosystem partners ────────────────────────────────────────────── */}
+        <EcosystemPartners />
+      </Suspense>
     </>
   );
 }
