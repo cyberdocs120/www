@@ -10,10 +10,7 @@
  * only fetched by components that actually need live Soroban RPC calls
  * (i.e. StellarMetrics via stellarMetrics.ts).
  */
-import {
-  STELLAR_CONTRACTS,
-  STELLAR_EXPLORER_BASE,
-} from '../data/stellarDeployment';
+import { STELLAR_CONTRACTS, STELLAR_EXPLORER_BASE } from '../data/stellarDeployment';
 import { trackOutbound } from '../utils/track';
 import { useInView } from '../hooks/useInView';
 

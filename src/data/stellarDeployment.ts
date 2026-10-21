@@ -15,13 +15,11 @@
  *     The source of truth is: getDeployment('stellar') from @wraith-protocol/sdk.
  */
 
-export const STELLAR_SOROBAN_URL =
-  'https://soroban-testnet.stellar.org' as const;
+export const STELLAR_SOROBAN_URL = 'https://soroban-testnet.stellar.org' as const;
 
 export const STELLAR_CONTRACTS = {
   announcer: 'CCJLJ2QRBJAAKIG6ELNQVXLLWMKKWVN5O2FKWUETHZGMPAD4MHK7WVWL',
   names: 'CDEMB3MAE62ZOCCKZPTYSXR5CS5WVENPOU5MDVK4PNKTZXFVDC74AFBV',
 } as const;
 
-export const STELLAR_EXPLORER_BASE =
-  'https://stellar.expert/explorer/testnet/contract/';
+export const STELLAR_EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/contract/';
