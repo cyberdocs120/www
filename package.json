@@ -17,6 +17,7 @@
     "test:a11y": "vitest run src/__tests__/a11y.test.tsx",
     "test:a11y:playwright": "playwright test tests/a11y",
     "test:link-check": "vitest run tests/link-check",
+    "test:gate": "bash tests/handoff-gate.test.sh",
     "check:links": "tsx scripts/check-links.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

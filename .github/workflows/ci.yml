@@ -52,13 +52,17 @@ jobs:
       - name: Ensure handoff artifacts are not tracked
         run: |
           patterns=(
+            'HANDOFF.md'
+            'HANDOFF_*.md'
+            'handoff.md'
+            'handoff_*.md'
             'PR_INFO.md'
             'PR_DESCRIPTION.md'
             'PR_BODY.md'
-            'HANDOFF.md'
-            'HANDOFF_*.md'
             'pr-info.md'
             'pr_info.md'
+            'pr-description.md'
+            'pr_description.md'
             'pr-body.md'
             'pr_body.md'
           )
